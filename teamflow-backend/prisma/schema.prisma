@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_UPDATED
+  COMMENT_ADDED
+}
+
+model User {
+  id              String   @id @default(uuid())
+  name            String
+  email           String   @unique
+  passwordHash    String?
+  oauthProvider   String?
+  oauthId         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  memberships     OrganizationMember[]
+  createdProjects Project[] @relation("ProjectCreator")
+  assignedTasks   Task[]    @relation("TaskAssignee")
+  createdTasks    Task[]    @relation("TaskCreator")
+  comments        Comment[]
+  notifications   Notification[]
+  sessions        Session[]
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     OrganizationMember[]
+  projects    Project[]
+  notifications Notification[]
+}
+
+model OrganizationMember {
+  id              String   @id @default(uuid())
+  role            Role
+  joinedAt        DateTime @default(now())
+
+  userId          String
+  organizationId  String
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+}
+
+model Project {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  isArchived      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organizationId  String
+  createdById     String
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy       User         @relation("ProjectCreator", fields: [createdById], references: [id])
+
+  tasks           Task[]
+}
+
+model Task {
+  id              String       @id @default(uuid())
+  title           String
+  description     String?
+  status          TaskStatus   @default(TODO)
+  priority        TaskPriority @default(MEDIUM)
+  dueDate         DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  projectId       String
+  assignedUserId  String?
+  createdById     String
+
+  project         Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedUser    User?   @relation("TaskAssignee", fields: [assignedUserId], references: [id])
+  createdBy       User    @relation("TaskCreator", fields: [createdById], references: [id])
+
+  comments        Comment[]
+}
+
+model Comment {
+  id          String   @id @default(uuid())
+  content     String
+  createdAt   DateTime @default(now())
+
+  taskId      String
+  userId      String
+
+  task        Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id              String           @id @default(uuid())
+  type            NotificationType
+  referenceId     String
+  isRead          Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+
+  userId          String
+  organizationId  String
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id              String   @id @default(uuid())
+  refreshTokenHash String
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+
+  userId          String
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
