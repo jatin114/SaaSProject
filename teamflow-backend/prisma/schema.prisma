@@ -49,6 +49,7 @@ model User {
   comments        Comment[]
   notifications   Notification[]
   sessions        Session[]
+  activityLogs ActivityLog[]
 }
 
 model Organization {
@@ -60,6 +61,7 @@ model Organization {
   members     OrganizationMember[]
   projects    Project[]
   notifications Notification[]
+  activityLogs ActivityLog[]
 }
 
 model OrganizationMember {
@@ -148,4 +150,20 @@ model Session {
 
   userId          String
   user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id             String   @id @default(uuid())
+
+  action         String
+  entityType     String
+  entityId       String?
+
+  userId         String
+  organizationId String
+
+  createdAt      DateTime @default(now())
+
+  user           User @relation(fields: [userId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
 }
