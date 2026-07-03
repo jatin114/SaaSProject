@@ -1,7 +1,7 @@
 {
   "name": "teamflow-backend",
   "version": "0.0.1",
-  "description": "",
+  "description": "A production-ready multi-tenant SaaS project management backend built with NestJS, Prisma, and PostgreSQL.",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
