@@ -10,10 +10,30 @@ import { CommentsModule } from './comments/comments.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
+import { HealthModule } from './health/health.module';
+import * as Joi from 'joi';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      expandVariables: true,
+
+      validationSchema: Joi.object({
+        DATABASE_URL: Joi.string().required(),
+
+        JWT_SECRET: Joi.string()
+          .min(16)
+          .required(),
+
+        JWT_REFRESH_SECRET: Joi.string()
+          .min(16)
+          .required(),
+
+        PORT: Joi.number().default(3000),
+      }),
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -23,6 +43,7 @@ import { ActivityLogsModule } from './activity-logs/activity-logs.module';
     NotificationsModule,
     OrganizationsModule,
     ActivityLogsModule,
+    HealthModule,
   ],
   controllers: [AppController],
 })

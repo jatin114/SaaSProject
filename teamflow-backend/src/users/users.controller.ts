@@ -11,6 +11,7 @@ import {
     ApiBearerAuth,
     ApiBody,
     ApiOperation,
+    ApiParam,
     ApiResponse,
     ApiTags,
 } from '@nestjs/swagger';
@@ -26,23 +27,26 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @UseGuards(JwtAuthGuard)
 export class UsersController {
     constructor(
-        private usersService: UsersService,
+        private readonly usersService: UsersService,
     ) { }
 
     @Get()
     @ApiOperation({
         summary: 'Get organization users',
-        description: 'Returns all users belonging to the current organization.',
+        description:
+            'Returns all users belonging to the current organization.',
     })
     @ApiResponse({
         status: 200,
-        description: 'Users fetched successfully',
+        description: 'Users fetched successfully.',
     })
     @ApiResponse({
         status: 401,
-        description: 'Unauthorized',
+        description: 'Unauthorized.',
     })
-    getUsers(@CurrentUser() user: any) {
+    getUsers(
+        @CurrentUser() user: any,
+    ) {
         return this.usersService.getOrganizationUsers(
             user.userId,
         );
@@ -51,7 +55,13 @@ export class UsersController {
     @Patch(':id/role')
     @ApiOperation({
         summary: 'Update user role',
-        description: 'Updates the role of a user within the organization.',
+        description:
+            'Updates the role of a user within the current organization.',
+    })
+    @ApiParam({
+        name: 'id',
+        description: 'User ID.',
+        example: 'b18a45fb-9a9a-4d90-abaf-a9099a8e31c2',
     })
     @ApiBody({
         schema: {
@@ -60,22 +70,26 @@ export class UsersController {
                 role: {
                     type: 'string',
                     enum: Object.values(Role),
-                    example: 'ADMIN',
+                    example: Role.ADMIN,
                 },
             },
         },
     })
     @ApiResponse({
         status: 200,
-        description: 'User role updated successfully',
+        description: 'User role updated successfully.',
+    })
+    @ApiResponse({
+        status: 401,
+        description: 'Unauthorized.',
     })
     @ApiResponse({
         status: 403,
-        description: 'Forbidden',
+        description: 'Forbidden.',
     })
     @ApiResponse({
         status: 404,
-        description: 'User not found',
+        description: 'User not found.',
     })
     updateRole(
         @CurrentUser() user: any,
@@ -92,19 +106,29 @@ export class UsersController {
     @Delete(':id')
     @ApiOperation({
         summary: 'Remove user',
-        description: 'Removes a user from the current organization.',
+        description:
+            'Removes a user from the current organization.',
+    })
+    @ApiParam({
+        name: 'id',
+        description: 'User ID.',
+        example: 'b18a45fb-9a9a-4d90-abaf-a9099a8e31c2',
     })
     @ApiResponse({
         status: 200,
-        description: 'User removed successfully',
+        description: 'User removed successfully.',
+    })
+    @ApiResponse({
+        status: 401,
+        description: 'Unauthorized.',
     })
     @ApiResponse({
         status: 403,
-        description: 'Forbidden',
+        description: 'Forbidden.',
     })
     @ApiResponse({
         status: 404,
-        description: 'User not found',
+        description: 'User not found.',
     })
     removeUser(
         @CurrentUser() user: any,
