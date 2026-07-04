@@ -1,5 +1,13 @@
-import { Body, Controller, Post } from '@nestjs/common';
 import {
+    Body,
+    Controller,
+    Get,
+    Patch,
+    Post,
+    UseGuards,
+} from '@nestjs/common';
+import {
+    ApiBearerAuth,
     ApiBody,
     ApiOperation,
     ApiResponse,
@@ -10,6 +18,9 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -35,14 +46,6 @@ export class AuthController {
         status: 400,
         description: 'Validation failed.',
     })
-    @ApiResponse({
-        status: 409,
-        description: 'Email already exists.',
-    })
-    @ApiResponse({
-        status: 500,
-        description: 'Internal server error.',
-    })
     async register(
         @Body() dto: RegisterDto,
     ) {
@@ -53,7 +56,7 @@ export class AuthController {
     @ApiOperation({
         summary: 'Login user',
         description:
-            'Authenticates a user and returns an access token along with a refresh token.',
+            'Authenticates a user and returns access and refresh tokens.',
     })
     @ApiBody({
         type: LoginDto,
@@ -63,16 +66,8 @@ export class AuthController {
         description: 'Login successful.',
     })
     @ApiResponse({
-        status: 400,
-        description: 'Validation failed.',
-    })
-    @ApiResponse({
         status: 401,
-        description: 'Invalid email or password.',
-    })
-    @ApiResponse({
-        status: 500,
-        description: 'Internal server error.',
+        description: 'Invalid credentials.',
     })
     async login(
         @Body() dto: LoginDto,
@@ -91,25 +86,69 @@ export class AuthController {
     })
     @ApiResponse({
         status: 200,
-        description: 'Access token refreshed successfully.',
-    })
-    @ApiResponse({
-        status: 400,
-        description: 'Validation failed.',
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'Invalid refresh token.',
-    })
-    @ApiResponse({
-        status: 500,
-        description: 'Internal server error.',
+        description: 'Token refreshed successfully.',
     })
     async refresh(
         @Body() dto: RefreshDto,
     ) {
         return this.authService.refresh(
             dto.refreshToken,
+        );
+    }
+
+    @Get('profile')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({
+        summary: 'Get current user profile',
+        description:
+            'Returns the authenticated user profile along with organization and role.',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile fetched successfully.',
+    })
+    @ApiResponse({
+        status: 401,
+        description: 'Unauthorized.',
+    })
+    getProfile(
+        @CurrentUser() user: any,
+    ) {
+        return this.authService.getProfile(
+            user.userId,
+        );
+    }
+    @Patch('change-password')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({
+        summary: 'Change password',
+        description:
+            'Allows the authenticated user to change their password.',
+    })
+    @ApiBody({
+        type: ChangePasswordDto,
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Password changed successfully.',
+    })
+    @ApiResponse({
+        status: 400,
+        description: 'Invalid current password.',
+    })
+    @ApiResponse({
+        status: 401,
+        description: 'Unauthorized.',
+    })
+    changePassword(
+        @CurrentUser() user: any,
+        @Body() dto: ChangePasswordDto,
+    ) {
+        return this.authService.changePassword(
+            user.userId,
+            dto,
         );
     }
 }

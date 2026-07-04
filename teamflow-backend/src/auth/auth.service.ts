@@ -5,6 +5,7 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -154,5 +155,97 @@ export class AuthService {
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             },
         });
+    }
+
+    async getProfile(userId: string) {
+        const membership =
+            await this.prisma.organizationMember.findFirst({
+                where: {
+                    userId,
+                },
+                include: {
+                    user: true,
+                    organization: true,
+                },
+            });
+
+        if (!membership) {
+            throw new BadRequestException(
+                'Organization not found',
+            );
+        }
+
+        return {
+            id: membership.user.id,
+            name: membership.user.name,
+            email: membership.user.email,
+            role: membership.role,
+            organization: {
+                id: membership.organization.id,
+                name: membership.organization.name,
+            },
+        };
+    }
+
+    async changePassword(
+        userId: string,
+        dto: ChangePasswordDto,
+    ) {
+        const user = await this.prisma.user.findUnique({
+            where: {
+                id: userId,
+            },
+        });
+
+        if (!user || !user.passwordHash) {
+            throw new BadRequestException('User not found');
+        }
+
+        const isCurrentPasswordValid = await bcrypt.compare(
+            dto.currentPassword,
+            user.passwordHash,
+        );
+
+        if (!isCurrentPasswordValid) {
+            throw new BadRequestException(
+                'Current password is incorrect',
+            );
+        }
+
+        const isSamePassword = await bcrypt.compare(
+            dto.newPassword,
+            user.passwordHash,
+        );
+
+        if (isSamePassword) {
+            throw new BadRequestException(
+                'New password must be different from the current password',
+            );
+        }
+
+        const hashedPassword = await bcrypt.hash(
+            dto.newPassword,
+            10,
+        );
+
+        await this.prisma.user.update({
+            where: {
+                id: userId,
+            },
+            data: {
+                passwordHash: hashedPassword,
+            },
+        });
+
+        // Invalidate all refresh sessions
+        await this.prisma.session.deleteMany({
+            where: {
+                userId,
+            },
+        });
+
+        return {
+            message: 'Password changed successfully. Please login again.',
+        };
     }
 }
